@@ -1,0 +1,66 @@
+1# Write a code to calculate the average intervals between spud date and completion date by county and spud year.
+
+with cte1 as (
+SELECT 
+county,year(spud_date) as spud_year, datediff(completion_date,spud_date) as time_interval
+ FROM oil_db.exercise_main)
+ select county,spud_year,round(avg(time_interval),2) as day_interval
+ from cte1
+ group by county,spud_year
+ order by spud_year desc;
+
+
+
+2# Write a code to output total production of both oil and gas (separately) in the State 2, by month. Display the values in daily rates (barrels per day, thousand cubic feet Mcf per day) instead of total volumes, as is standard in the industry. For example, 28,000 barrels in February and 31,000 in March both correspond to 1,000 barrels per day, which is interpreted as no change,
+
+SELECT 
+Year,Month,
+sum(Oil/Days_production) as Total_oil_production_bpd,
+sum(Gas/Days_production) as Total_gas_production_mcf_pd
+FROM exercise_main a
+JOIN exercise_monthly b on a.Nas_well_id=b.Nas_well_id
+where state="State 2"
+group by Year,Month;
+
+
+
+
+
+
+3# Write a code to generate a new temporary table (resp, dataframe) with columns: year, month, County, oil (bbl), gas (Mcf), and total production, which is oil + gas/6 (as 6,000 Mcf of gas are equivalent energetically to one barrel of oil). Treat NULLs as 0. 
+
+CREATE TEMPORARY TABLE total_production
+SELECT 
+a.Nas_well_id,year,Month,county,Oil as oil_bbl,Gas as gas_mcf,
+sum(round(oil+(Gas/6),2)) as total_production_bbl
+FROM exercise_main a
+JOIN exercise_monthly b on a.Nas_well_id=b.Nas_well_id 
+group by year,month,county
+
+
+4# The key task is to write a code that computes the average well initial productivity by completion year. The initial productivity of a single well is defined, for this exercise, as total production over the first 4 full months after the well is completed.
+
+
+SELECT
+    YEAR(p.completion_date) AS completion_year,
+    round(AVG(q.total_production_bbl),2) AS avg_initial_productivity
+FROM exercise_main p
+JOIN total_production q ON p.Nas_well_id=q.Nas_well_id
+WHERE
+    q.year = YEAR(p.completion_date)
+    AND q.month BETWEEN MONTH(p.completion_date) AND MONTH(DATE_ADD(p.completion_date, INTERVAL 4 MONTH))
+GROUP BY
+    completion_year;
+
+
+
+
+
+
+
+
+
+
+
+
+
